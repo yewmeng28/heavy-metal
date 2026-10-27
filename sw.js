@@ -1,5 +1,5 @@
 // Network-first so updates show up when online; cache is the offline fallback.
-const CACHE = 'hm-v9';
+const CACHE = 'hm-v11';
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'mascots.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

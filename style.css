@@ -160,3 +160,34 @@ input.q{margin:6px 0}
 .coach .muted.sm{font-size:16px;color:var(--text);margin-top:2px}
 #alarm .av.huge{width:160px;height:160px}
 #alarm p{font-size:24px;padding:0 20px}
+
+/* layout fixes: wrapping buttons, iOS date input width */
+.row.wrap .btn{white-space:normal;min-width:0;line-height:1.2}
+input[type=date]{display:block;width:100%;max-width:100%;min-width:0;-webkit-appearance:none;appearance:none;text-align:left;min-height:44px}
+input[type=date]::-webkit-date-and-time-value{text-align:left}
+
+/* notes, supersets, PRs, body weight */
+textarea.note{min-height:52px;margin-bottom:6px}
+.hnote{font-size:13px;color:var(--steel);font-style:italic;margin:2px 0}
+.tag{font-size:10px;letter-spacing:.1em;background:var(--red);color:#fff;border-radius:4px;padding:1px 5px;vertical-align:middle}
+.entry.ss{border-left:3px solid var(--red);padding-left:8px}
+.btn.on{background:var(--red);border-color:var(--red);color:#fff}
+.set.pr input{border-color:#d4a017}
+.set.pr .n::after{content:"🏆";position:absolute;font-size:10px;margin:-2px 0 0 -6px}
+#readout,#readout2{min-height:22px;text-align:center;font-size:14px;color:var(--steel)}
+.card.warn .row{margin-bottom:0}
+
+/* accent-aware tints (follow the chosen accent colour) */
+.crewb.on{background:color-mix(in srgb,var(--red) 16%,var(--card2))}
+.set.done input{border-color:color-mix(in srgb,var(--red) 45%,var(--line))}
+.swatches{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0}
+.swatch{width:38px;height:38px;border-radius:50%;border:2px solid transparent;padding:0}
+.swatch.on{border-color:var(--text);box-shadow:inset 0 0 0 2px var(--bg)}
+
+/* light theme */
+html[data-theme=light]{--bg:#f4f2ef;--card:#fff;--card2:#efebe6;--line:#d8d2ca;--text:#1c1a18;--muted:#6b665f;--steel:#4a5058;color-scheme:light}
+html[data-theme=light] body{background:radial-gradient(900px 300px at 50% -80px,color-mix(in srgb,var(--red) 16%,transparent) 0,transparent 70%),var(--bg)}
+html[data-theme=light] #timer{background:#fff;border-top-color:var(--line)}
+html[data-theme=light] #tabs{background:#fff}
+html[data-theme=light] #toast{background:#fff;color:var(--text);box-shadow:0 6px 24px rgba(0,0,0,.18)}
+html[data-theme=light] .card{box-shadow:0 1px 3px rgba(0,0,0,.06)}

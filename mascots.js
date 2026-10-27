@@ -21,6 +21,7 @@ const MASCOTS = [
       <path d="M23 44 H41" stroke="#222" stroke-width="2.2"/>
       <path d="M25 42 v5 M29 42 v5 M33 42 v5 M37 42 v5" stroke="#222" stroke-width="1.2"/>`),
     lines: {
+      pr: ["New personal best. Don't you dare get soft now.", "That's a record. Disgusting. Beautiful."],
       idle: ['Mask on, maggots. Time to get ugly.', 'Heavy things exist to be picked up and thrown around.', "Nobody's coming to save you. Lift something.", "Stop staring at the bar and pick it up.", "Scared? Good. Use it."],
       start: ['Get your head right. Then wreck the bar.', 'Warm up. Then make a mess.', "Put the phone down. Pick the weight up.", "Mask on. Brain off. Lift.", "Let's see what you've got, maggot."],
       set: ['Ugly and loud. That\'s how it\'s done.', 'That one hurt, didn\'t it? Good.', 'Don\'t whine. Next set.', "Now that's disgusting. Beautiful.", "Less thinking, more screaming. Next.", "Your muscles hate you. Keep going.", "Not bad. Not great. Do it again."],
@@ -45,6 +46,7 @@ const MASCOTS = [
       <path d="M26.5 40.5 Q32 37.5 37.5 40.5 Q32 43 26.5 40.5Z" fill="#1c1515"/>
       <path d="M29 44.5 h6" stroke="#d8a780" stroke-width="1.4" stroke-linecap="round"/>`),
     lines: {
+      pr: ["A new record! The people rejoice.", "History made. Put it in the revolution's journal."],
       idle: ['Question everything. Especially your excuses.', 'Power to the people. Start with the legs.', "Be an agent of change. Start with a squat.", "Stay loud, stay weird, stay strong.", "Stand up for something. Today, it's a deadlift."],
       start: ['The revolution begins with a warm-up.', 'Don\'t follow orders. Write your own programme.', "Today's agenda: lift heavy, think freely.", "Warm up your muscles and your opinions.", "Wake up. The bar won't lift itself."],
       set: ['Resist the urge to quit. Again!', 'The system wants you sitting down. Stand up and lift.', 'One more rep for the people.', "Unite the muscle fibres. Again!", "Power to the biceps. Next set.", "Fight apathy. One more rep.", "Strength for everyone. Starting with you."],
@@ -70,6 +72,7 @@ const MASCOTS = [
       <path d="M26 41 q6 4 12 0" stroke="#7a4b3a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
       <circle cx="19" cy="38" r="1.8" fill="none" stroke="#bbb" stroke-width="1"/>`),
     lines: {
+      pr: ["Personal best, mate! Absolutely buzzing for you.", "New PB! Get in, you legend."],
       idle: ['Right then, no excuses today, mate.', 'Rough day? Get a brew, then smash a few sets.', "Chin up, mate. You've got this.", "Not feeling it? Do one set and see.", "Today's a good day to be a bit stronger."],
       start: ['Come on then, let\'s have it.', 'Kettle\'s on after this. Let\'s crack on.', "Right, let's get stuck in.", "Deep breath, shoulders back. Off we go.", "Brilliant, you showed up. That's half of it."],
       set: ['Lovely stuff, that. Go again.', 'Proper effort, mate. Cracking set.', 'Bloody hell, look at you go.', "Smashed it, mate. Absolutely smashed it.", "Get in! Go on, another one.", "That's the stuff. You're flying.", "Not bad at all, that. Not bad at all."],
@@ -90,6 +93,7 @@ const MASCOTS = [
       <circle cx="32" cy="24" r="2.4" fill="#c4314b"/>
       <path d="M27 45 q5 2.4 10 0" stroke="#c4314b" stroke-width="1.5" fill="none" stroke-linecap="round"/>`),
     lines: {
+      pr: ["A new height is reached. The iron bows.", "Your devotion is rewarded. A new record."],
       idle: ['The ritual awaits. Step forward.', 'Offer your effort to the iron.', "Strength is a quiet devotion.", "The faithful do not skip leg day.", "Return, and be rebuilt."],
       start: ['Begin the ritual.', 'Close your eyes. Then lift.', "Enter. Leave the day behind.", "The altar is ready. Approach.", "Kneel, then rise. The set begins."],
       set: ['Another offering made. Continue.', 'The iron accepts it.', 'Steady. Devoted. Again.', "The iron remembers your devotion.", "Each rep is a prayer. Say another.", "You are becoming something greater.", "Breathe. Lift. Repeat the rite."],
@@ -115,6 +119,7 @@ const MASCOTS = [
       <path d="M21 29 l4 0 M36 29 l4 0" stroke="#d7263d" stroke-width="1.6" opacity=".7"/>
       <path d="M28 40 h8" stroke="#8a5a45" stroke-width="1.6" stroke-linecap="round"/>`),
     lines: {
+      pr: ["New PR, brother! That's a headliner moment.", "Record broken, dude. Absolute legend."],
       idle: ['Another day, another reason to crush it, brother.', 'Huntington Beach strong. Let\'s go.', "Let's make today a classic, brother.", "Fire up the amp. Lift something loud.", "Rock stars don't skip warm-ups. Let's go."],
       start: ['Alright dudes, soundcheck\'s over. Let\'s lift.', 'Throw on the flannel and get after it.', "Lights are down. Crowd's waiting. Let's lift.", "Tune up, bro. It's go time.", "Grab the bar. We've got a show to play."],
       set: ['Sick set, bro. Shred the next one.', 'That\'s a face-melter. Keep it rolling.', 'Dude, you\'re on fire. Again.', "That set was pure riff, dude.", "Absolute beast mode. Shred it again.", "Crowd's going wild. One more.", "Nailed it, brother. Next song."],
