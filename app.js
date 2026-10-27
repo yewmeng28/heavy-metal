@@ -31,11 +31,25 @@ function load() {
   return seed();
 }
 
+/* exercise categories */
+const CATS = { push: 'Push', pull: 'Pull', legs: 'Legs', other: 'Other' };
+const CAT_ORDER = Object.keys(CATS);
+function guessCat(name) {
+  const n = name.toLowerCase();
+  if (/leg|squat|lunge|calf|glute|hamstring|quad|hip thrust/.test(n)) return 'legs';
+  if (/row|pull|curl|lat |deadlift|shrug|chin|face/.test(n)) return 'pull';
+  if (/press|push|bench|dip|tricep|fly|pec|raise|extension/.test(n)) return 'push';
+  return 'other';
+}
+
 let S = load();
+const fixCats = () => S.exercises.forEach(e => { if (!CATS[e.cat]) e.cat = guessCat(e.name); });
+fixCats();
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('Could not save (storage full or blocked)'); } }
 try { navigator.storage?.persist?.(); } catch (e) { /* ignore */ }
 
-const ui = { tab: 'train', progEx: null, progMetric: 'top', runMetric: 'dist', sw: { start: 0, acc: 0, on: false } };
+const ui = { tab: 'train', progEx: null, progMetric: 'top', runMetric: 'dist', sw: { start: 0, acc: 0, on: false },
+  open: {}, pq: {}, pc: {}, libq: '', histN: 10 };
 
 /* units */
 const toDisp = kg => S.settings.unit === 'kg' ? kg : kg / KG;
@@ -50,7 +64,7 @@ const exName = (id, fb) => S.exercises.find(e => e.id === id)?.name ?? fb ?? '?'
 
 function toast(msg, avatar) {
   const t = $('#toast'); t.innerHTML = (avatar ? `<span class="av mini">${avatar}</span>` : '') + `<span>${esc(msg)}</span>`; t.hidden = false;
-  clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, avatar ? 3200 : 2200);
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, avatar ? 4200 : 2200);
 }
 
 /* ---------- mascots ---------- */
@@ -87,7 +101,33 @@ function render() {
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === ui.tab));
 }
 
-const exOptions = () => S.exercises.map(e => `<option value="${e.id}">${esc(e.name)}</option>`).join('');
+/* collapsible sections; open/closed state survives re-renders */
+const det = (k, sum, body, def = false, o = {}) =>
+  `<details class="${o.cls || 'fold'}" data-k="${esc(k)}"${o.force ? ' data-force' : ''}${o.force || (ui.open[k] ?? def) ? ' open' : ''}><summary>${sum}</summary>${body}</details>`;
+
+/* searchable exercise picker (workout: key "add", templates: key = template id) */
+function createExercise(name, cat) {
+  const hit = S.exercises.find(e => e.name.toLowerCase() === name.toLowerCase());
+  if (hit) return hit.id;
+  const e = { id: uid(), name, cat: CATS[cat] ? cat : guessCat(name) };
+  S.exercises.push(e); return e.id;
+}
+function pickerHtml(key) {
+  const c = ui.pc[key] || 'all';
+  return `<input class="q" data-inp="pick" data-key="${key}" value="${esc(ui.pq[key] || '')}" placeholder="Search exercises…" autocomplete="off" autocapitalize="off">
+    <div class="chips">${['all', ...CAT_ORDER].map(x => `<button class="${x === c ? 'on' : ''}" data-act="pickCat" data-key="${key}" data-c="${x}">${x === 'all' ? 'All' : CATS[x]}</button>`).join('')}</div>
+    <div id="res-${key}">${resultsHtml(key)}</div>`;
+}
+function resultsHtml(key) {
+  const raw = (ui.pq[key] || '').trim(), q = raw.toLowerCase(), c = ui.pc[key] || 'all', act = key === 'add' ? 'pickEx' : 'pickTpl';
+  const last = {}; S.workouts.forEach(w => w.entries.forEach(e => last[e.exerciseId] = Math.max(last[e.exerciseId] || 0, w.date)));
+  const list = S.exercises.filter(e => (c === 'all' || e.cat === c) && e.name.toLowerCase().includes(q))
+    .sort((a, b) => (last[b.id] || 0) - (last[a.id] || 0) || a.name.localeCompare(b.name));   // recently used first
+  let h = list.slice(0, 6).map(e => `<button class="pick" data-act="${act}" data-key="${key}" data-id="${e.id}"><span>${esc(e.name)}</span><small>${CATS[e.cat]}</small></button>`).join('');
+  if (list.length > 6) h += `<div class="muted sm">+${list.length - 6} more. Keep typing to narrow down.</div>`;
+  if (raw && !S.exercises.some(e => e.name.toLowerCase() === q)) h += `<button class="pick new" data-act="${act}" data-key="${key}" data-name="${esc(raw)}">+ Create "${esc(raw)}"</button>`;
+  return h || '<div class="muted sm">No exercises yet. Type a name to create one.</div>';
+}
 
 /* --- Train --- */
 function viewTrain() {
@@ -101,14 +141,14 @@ function startHtml() {
       <button class="btn" data-act="startTpl" data-id="${t.id}">Start</button></div>`).join('');
   return `<section class="card"><h2>New session</h2>
     <button class="btn primary big" data-act="startEmpty">Empty workout</button>
-    ${tpls ? `<h3>Setlists</h3>${tpls}` : ''}</section>`;
+    ${tpls ? det('setlists', `<b>Setlists (${S.templates.length})</b>`, tpls, S.templates.length <= 4) : ''}</section>`;
 }
 
 function activeHtml() {
   const a = S.active;
   return `<section class="card"><input class="title" data-chg="wname" value="${esc(a.name)}" aria-label="Workout name">
     ${a.entries.map(entryHtml).join('')}
-    <div class="row" style="margin-top:14px"><select id="addEx">${exOptions()}</select><button class="btn" data-act="addEx">Add</button></div>
+    ${det('addpick', '<b>+ Add exercise</b>', pickerHtml('add'), !a.entries.length, { cls: 'fold sub' })}
     <div class="row"><button class="btn primary grow" data-act="finish">Finish</button><button class="btn ghost danger" data-act="discard">Discard</button></div>
   </section>`;
 }
@@ -125,40 +165,56 @@ function entryHtml(e, ei) {
       <button class="chk" data-act="toggleSet" ${d} aria-label="Done">✓</button>
       <button class="x" data-act="delSet" ${d} aria-label="Remove set">×</button></div>`;
   }).join('');
-  return `<div class="entry"><div class="hd"><b>${esc(exName(e.exerciseId, e.name))}</b>
-      <button class="btn sm ghost danger" data-act="delEntry" data-ei="${ei}">Remove</button></div>
-    <div class="muted sm">${last ? 'Last: ' + last.map(setTxt).join(', ') : 'No previous sessions'}</div>
+  const done = e.sets.filter(s => s.done).length;
+  return det('e-' + e.exerciseId, `<span class="grow"><b>${esc(exName(e.exerciseId, e.name))}</b> <span class="muted sm">${done}/${e.sets.length} sets</span></span>`,
+    `<div class="muted sm">${last ? 'Last: ' + last.map(setTxt).join(', ') : 'No previous sessions'}</div>
     <div class="setlbl"><span>#</span><span>${S.settings.unit}</span><span>reps</span><span></span><span></span></div>
     ${rows}<div class="addrow"><button class="btn sm" data-act="addSet" data-t="warm" data-ei="${ei}">+ Warm-up</button>
       <button class="btn sm" data-act="addSet" data-t="work" data-ei="${ei}">+ Set</button>
-      <button class="btn sm" data-act="addSet" data-t="drop" data-ei="${ei}">+ Drop set</button></div></div>`;
+      <button class="btn sm" data-act="addSet" data-t="drop" data-ei="${ei}">+ Drop set</button>
+      <button class="btn sm ghost danger" data-act="delEntry" data-ei="${ei}">Remove exercise</button></div>`, true, { cls: 'fold entry' });
 }
 
 function historyHtml() {
-  const list = [...S.workouts].sort((a, b) => b.date - a.date).slice(0, 30).map(w => `
-    <div class="hist"><div class="t"><b>${esc(w.name)}</b><span class="muted sm">${fmtDate(w.date)}</span>
-      <button class="btn sm ghost danger" data-act="delWorkout" data-id="${w.id}">×</button></div>
-      ${w.entries.map(e => `<div class="l"><span style="color:var(--text)">${esc(exName(e.exerciseId, e.name))}</span> — ${e.sets.map(setTxt).join(', ')} ${S.settings.unit}</div>`).join('')}</div>`).join('');
-  return `<section class="card"><h2>History</h2>${list || '<p class="muted">Nothing logged yet. Go lift something heavy.</p>'}</section>`;
+  const all = [...S.workouts].sort((a, b) => b.date - a.date), n = ui.histN;
+  const list = all.slice(0, n).map(w => det('h-' + w.id,
+    `<span class="grow"><b>${esc(w.name)}</b> <span class="muted sm">${fmtDate(w.date)} · ${w.entries.length} exercises</span></span>`,
+    w.entries.map(e => `<div class="l"><span style="color:var(--text)">${esc(exName(e.exerciseId, e.name))}</span> — ${e.sets.map(setTxt).join(', ')} ${S.settings.unit}</div>`).join('') +
+    `<div class="row"><button class="btn sm" data-act="saveTpl" data-id="${w.id}">Save as setlist</button>
+      <button class="btn sm ghost danger" data-act="delWorkout" data-id="${w.id}">Delete</button></div>`)).join('');
+  return `<section class="card"><h2>History</h2>${list || '<p class="muted">Nothing logged yet. Go lift something heavy.</p>'}
+    ${all.length > n ? `<button class="btn sm" data-act="moreHist">Show more (${all.length - n})</button>` : ''}</section>`;
 }
 
 /* --- Library --- */
+const catSelect = (cur, attrs, auto) => `<select class="catsel" ${attrs}>${auto ? '<option value="auto">Auto</option>' : ''}${CAT_ORDER.map(c => `<option value="${c}" ${cur === c ? 'selected' : ''}>${CATS[c]}</option>`).join('')}</select>`;
+
+// Exercises grouped by category, collapsed by default; searching opens every matching group.
+function libList() {
+  const q = ui.libq.trim().toLowerCase();
+  const out = CAT_ORDER.map(c => {
+    const items = S.exercises.filter(e => e.cat === c && e.name.toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
+    if (!items.length) return '';
+    return det('lib-' + c, `<span class="grow"><b>${CATS[c]}</b> <span class="muted sm">${items.length}</span></span>`, items.map(e => `
+      <div class="row"><div>${esc(e.name)}</div>${catSelect(e.cat, `data-chg="exCat" data-id="${e.id}" aria-label="Category"`)}
+        <button class="btn sm ghost" data-act="renameEx" data-id="${e.id}">Rename</button>
+        <button class="btn sm ghost danger" data-act="delEx" data-id="${e.id}">×</button></div>`).join(''), false, { force: !!q });
+  }).join('');
+  return out || '<p class="muted">No matching exercises.</p>';
+}
+
 function viewLib() {
-  const ex = S.exercises.slice().sort((a, b) => a.name.localeCompare(b.name)).map(e => `
-    <div class="row"><div>${esc(e.name)}</div>
-      <button class="btn sm ghost" data-act="renameEx" data-id="${e.id}">Rename</button>
-      <button class="btn sm ghost danger" data-act="delEx" data-id="${e.id}">×</button></div>`).join('');
-  const tpl = S.templates.map(t => `
-    <div class="entry"><div class="hd"><b>${esc(t.name)}</b>
-      <button class="btn sm ghost danger" data-act="delTpl" data-id="${t.id}">Delete</button></div>
-      ${t.ids.map((id, i) => `<div class="row"><div>${esc(exName(id))}</div>
+  const tpl = S.templates.map(t => det('tpl-' + t.id,
+    `<span class="grow"><b>${esc(t.name)}</b> <span class="muted sm">${t.ids.length} exercises</span></span>`,
+    t.ids.map((id, i) => `<div class="row"><div>${esc(exName(id))}</div>
         <button class="btn sm ghost" data-act="tplUp" data-id="${t.id}" data-i="${i}">↑</button>
-        <button class="btn sm ghost danger" data-act="tplRem" data-id="${t.id}" data-i="${i}">×</button></div>`).join('')}
-      <div class="row"><select id="tsel-${t.id}">${exOptions()}</select><button class="btn" data-act="tplAdd" data-id="${t.id}">Add</button></div>
-    </div>`).join('');
-  return `<section class="card"><h2>Exercises</h2>
-      <div class="row"><input id="newEx" placeholder="e.g. Incline Dumbbell Press" autocapitalize="words"><button class="btn primary" data-act="addExercise">Add</button></div>
-      ${ex || '<p class="muted">No exercises yet.</p>'}</section>
+        <button class="btn sm ghost danger" data-act="tplRem" data-id="${t.id}" data-i="${i}">×</button></div>`).join('') +
+    det('tp-' + t.id, '<b>+ Add exercise</b>', pickerHtml(t.id), false, { cls: 'fold sub' }) +
+    `<div class="row"><button class="btn sm ghost danger" data-act="delTpl" data-id="${t.id}">Delete setlist</button></div>`)).join('');
+  return `<section class="card"><h2>Exercises <span class="muted sm">(${S.exercises.length})</span></h2>
+      <div class="row"><input id="newEx" placeholder="New exercise, e.g. Incline Press" autocapitalize="words">${catSelect('auto', 'id="newCat" aria-label="Category"', true)}<button class="btn primary" data-act="addExercise">Add</button></div>
+      <input class="q" data-inp="lib" value="${esc(ui.libq)}" placeholder="Search your exercises…" autocomplete="off" autocapitalize="off">
+      <div id="exList">${libList()}</div></section>
     <section class="card"><h2>Setlists (templates)</h2>
       <div class="row"><input id="newTpl" placeholder="e.g. Leg Day" autocapitalize="words"><button class="btn primary" data-act="addTpl">Create</button></div>
       ${tpl}</section>`;
@@ -180,7 +236,7 @@ function viewStats() {
   const pts = h.map(x => ({ x: x.date, y: m.f(x.sets), txt: `${fmtDate(x.date)}: ${m.fmt(m.f(x.sets))} ${ui.progMetric === 'vol' ? '' : S.settings.unit} — ${x.sets.map(setTxt).join(', ')}` }));
   const best = metrics.top.f(h.flatMap(x => x.sets)), best1 = Math.max(...h.map(x => metrics.e1rm.f(x.sets)));
   return `<section class="card"><h2>Progress</h2>
-    <select data-chg="progEx">${withData.map(e => `<option value="${e.id}" ${e.id === ui.progEx ? 'selected' : ''}>${esc(e.name)}</option>`).join('')}</select>
+    <select data-chg="progEx">${CAT_ORDER.map(c => { const g = withData.filter(e => e.cat === c); return g.length ? `<optgroup label="${CATS[c]}">${g.map(e => `<option value="${e.id}" ${e.id === ui.progEx ? 'selected' : ''}>${esc(e.name)}</option>`).join('')}</optgroup>` : ''; }).join('')}</select>
     <div class="seg">${Object.entries(metrics).map(([k, v]) => `<button class="${k === ui.progMetric ? 'on' : ''}" data-act="progMetric" data-k="${k}">${v.label}</button>`).join('')}</div>
     <div class="stats"><div class="stat"><b>${num(toDisp(best))}</b><span>Best ${S.settings.unit}</span></div>
       <div class="stat"><b>${num(toDisp(best1))}</b><span>Est. 1RM</span></div>
@@ -289,7 +345,21 @@ function newEntry(exerciseId) {
   const sets = prev ? prev.map(s => ({ w: s.w, r: s.r, t: s.t || 'work', done: false })) : [{ w: null, r: null, t: 'work', done: false }];
   return { exerciseId, name: exName(exerciseId), sets };
 }
-A.addEx = () => { const id = $('#addEx').value; if (!id) return toast('Add an exercise in Library first'); S.active.entries.push(newEntry(id)); save(); render(); };
+const pickId = t => t.dataset.id || createExercise(t.dataset.name, ui.pc[t.dataset.key]);
+A.pickEx = t => { S.active.entries.push(newEntry(pickId(t))); ui.pq.add = ''; ui.open.addpick = false; save(); render(); };
+A.pickTpl = t => { S.templates.find(x => x.id === t.dataset.key).ids.push(pickId(t)); ui.pq[t.dataset.key] = ''; save(); render(); };
+A.pickCat = t => { ui.pc[t.dataset.key] = t.dataset.c; render(); };
+A.moreHist = () => { ui.histN += 10; render(); };
+A.saveTpl = t => {
+  const w = S.workouts.find(x => x.id === t.dataset.id), name = prompt('Setlist name', w.name);
+  if (!name || !name.trim()) return;
+  const ids = [];
+  w.entries.forEach(e => {
+    const id = S.exercises.some(x => x.id === e.exerciseId) ? e.exerciseId : createExercise(e.name);   // re-create if deleted from library
+    if (!ids.includes(id)) ids.push(id);
+  });
+  S.templates.push({ id: uid(), name: name.trim(), ids }); save(); toast('Saved as setlist');
+};
 A.addSet = t => {
   const e = entryOf(t), type = t.dataset.t || 'work', work = e.sets.filter(s => (s.t || 'work') === 'work');
   let s;
@@ -322,7 +392,8 @@ A.delWorkout = t => { if (confirm('Delete this workout?')) { S.workouts = S.work
 A.addExercise = () => {
   const n = $('#newEx').value.trim(); if (!n) return;
   if (S.exercises.some(e => e.name.toLowerCase() === n.toLowerCase())) return toast('Already exists');
-  S.exercises.push({ id: uid(), name: n }); save(); render();
+  const c = $('#newCat').value;
+  S.exercises.push({ id: uid(), name: n, cat: c === 'auto' ? guessCat(n) : c }); save(); render();
 };
 A.renameEx = t => { const e = S.exercises.find(x => x.id === t.dataset.id), n = prompt('Rename exercise', e.name); if (n && n.trim()) { e.name = n.trim(); save(); render(); } };
 A.delEx = t => {
@@ -332,7 +403,6 @@ A.delEx = t => {
 };
 A.addTpl = () => { const n = $('#newTpl').value.trim(); if (!n) return; S.templates.push({ id: uid(), name: n, ids: [] }); save(); render(); };
 A.delTpl = t => { if (confirm('Delete this setlist?')) { S.templates = S.templates.filter(x => x.id !== t.dataset.id); save(); render(); } };
-A.tplAdd = t => { const v = $('#tsel-' + t.dataset.id).value; if (!v) return toast('Add exercises first'); S.templates.find(x => x.id === t.dataset.id).ids.push(v); save(); render(); };
 A.tplRem = t => { S.templates.find(x => x.id === t.dataset.id).ids.splice(+t.dataset.i, 1); save(); render(); };
 A.tplUp = t => { const a = S.templates.find(x => x.id === t.dataset.id).ids, i = +t.dataset.i; if (i > 0) { [a[i - 1], a[i]] = [a[i], a[i - 1]]; save(); render(); } };
 
@@ -403,7 +473,7 @@ function importData(txt, mode) {
     const nr = addAll('runs');
     toast(`Merged ${nw} workouts, ${nr} runs`);
   }
-  save(); render();
+  fixCats(); save(); render();
 }
 
 /* ---------- rest timer ---------- */
@@ -432,7 +502,8 @@ function timerDone() {
   if (S.settings.vibrate) try { navigator.vibrate?.([300, 100, 300, 100, 600]); } catch (e) { /* ignore */ }
   say('rest', true);
   $('#alarm').firstElementChild.innerHTML = `<span class="av huge">${ui.coach.m.svg}</span><div class="big">Rest over</div><p>${esc(ui.coach.line)}</p><small>tap to dismiss</small>`;
-  beep(); $('#alarm').hidden = false; stopTimer();
+  document.activeElement?.blur?.();   // dismiss the keyboard so the overlay isn't pushed up
+  beep(); $('#alarm').hidden = false; fitAlarm(); setTimeout(fitAlarm, 350); stopTimer();
 }
 function renderTimer() {
   const run = T.end > 0, el = $('#timer');
@@ -460,6 +531,7 @@ const CH = {
   w: t => { const s = entryOf(t).sets[+t.dataset.si], v = parseFloat(t.value.replace(',', '.')); s.w = isNaN(v) ? null : fromDisp(v); save(); },
   r: t => { const s = entryOf(t).sets[+t.dataset.si], v = parseInt(t.value, 10); s.r = isNaN(v) ? null : v; save(); },
   progEx: t => { ui.progEx = t.value; render(); },
+  exCat: t => { S.exercises.find(e => e.id === t.dataset.id).cat = t.value; save(); $('#exList').innerHTML = libList(); },
   set: t => {
     const k = t.dataset.k;
     S.settings[k] = t.type === 'checkbox' ? t.checked : t.type === 'number' ? Math.max(10, +t.value || 90) : t.value;
@@ -472,7 +544,30 @@ document.addEventListener('click', e => {
   const tab = e.target.closest('[data-tab]'); if (tab) { ui.tab = tab.dataset.tab; render(); scrollTo(0, 0); }
 });
 document.addEventListener('change', e => { const c = e.target.dataset?.chg; if (c && CH[c]) CH[c](e.target); });
-$('#alarm').addEventListener('click', () => $('#alarm').hidden = true);
+
+// Live search: update only the results so the keyboard stays open while typing.
+const INP = {
+  pick: t => { ui.pq[t.dataset.key] = t.value; const r = $('#res-' + t.dataset.key); if (r) r.innerHTML = resultsHtml(t.dataset.key); },
+  lib: t => { ui.libq = t.value; $('#exList').innerHTML = libList(); },
+};
+document.addEventListener('input', e => { const k = e.target.dataset?.inp; if (k && INP[k]) INP[k](e.target); });
+
+// Remember which sections are open (toggle doesn't bubble, so listen in the capture phase).
+document.addEventListener('toggle', e => {
+  const d = e.target;
+  if (d.tagName === 'DETAILS' && d.dataset.k && !('force' in d.dataset)) ui.open[d.dataset.k] = d.open;
+}, true);
+
+// Keep the REST OVER overlay centred on the *visible* area even if the keyboard was open (iOS shifts the viewport).
+function fitAlarm() {
+  const a = $('#alarm'), vv = window.visualViewport;
+  if (a.hidden || !vv) return;
+  a.style.top = vv.offsetTop + 'px'; a.style.height = vv.height + 'px'; a.style.bottom = 'auto';
+}
+function hideAlarm() { const a = $('#alarm'); a.hidden = true; ['top', 'height', 'bottom'].forEach(p => a.style.removeProperty(p)); }
+$('#alarm').addEventListener('click', hideAlarm);
+window.visualViewport?.addEventListener('resize', fitAlarm);
+window.visualViewport?.addEventListener('scroll', fitAlarm);
 $('#file').addEventListener('change', e => {
   const f = e.target.files[0]; if (!f) return;
   f.text().then(txt => importData(txt, e.target.dataset.mode || 'merge'));
